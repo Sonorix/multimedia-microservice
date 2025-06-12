@@ -1,0 +1,30 @@
+# Maven build directory
+target/
+
+# IDE files
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+.classpath
+.project
+.settings/
+
+# Environment variables
+.env
+
+# Compiled files
+*.class
+*.jar
+*.war
+*.ear
+
+# Logs
+*.log
+log/
+logs/
+
+# OS specific files
+.DS_Store
+Thumbs.db

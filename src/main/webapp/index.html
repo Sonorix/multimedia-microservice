@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multimedia Microservice</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f8f9fa;
+            color: #333;
+            line-height: 1.6;
+        }
+        header {
+            background: linear-gradient(135deg, #3a7bd5, #00d2ff);
+            color: white;
+            padding: 2rem 0;
+            text-align: center;
+        }
+        .container {
+            width: 80%;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        .status-card {
+            background-color: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-active {
+            background-color: #28a745;
+        }
+        h1 {
+            margin: 0;
+            font-size: 2.5rem;
+        }
+        h2 {
+            color: #3a7bd5;
+            margin-top: 0;
+        }
+        .api-section {
+            background-color: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .endpoint {
+            border-left: 4px solid #3a7bd5;
+            padding-left: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .method {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            margin-right: 8px;
+            font-size: 0.9rem;
+        }
+        .get {
+            background-color: #61affe;
+            color: white;
+        }
+        .post {
+            background-color: #49cc90;
+            color: white;
+        }
+        .put {
+            background-color: #fca130;
+            color: white;
+        }
+        .delete {
+            background-color: #f93e3e;
+            color: white;
+        }
+        .url {
+            font-family: monospace;
+            background-color: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        footer {
+            background-color: #343a40;
+            color: white;
+            text-align: center;
+            padding: 1rem 0;
+            margin-top: 2rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Multimedia Microservice</h1>
+        <p>Manage musician profiles, ratings, and multimedia content</p>
+    </header>
+
+    <div class="container">
+        <div class="status-card">
+            <h2>Service Status</h2>
+            <p>
+                <span class="status-indicator status-active"></span>
+                Active and running
+            </p>
+            <p>API Base Path: <span class="url">/Multimedia-microservice/resources</span></p>
+        </div>
+
+        <h2>API Overview</h2>
+
+        <div class="api-section">
+            <h3>Musician Profiles</h3>
+            <div class="endpoint">
+                <p><span class="method get">GET</span> <span class="url">/profiles</span></p>
+                <p>Get all musician profiles</p>
+            </div>
+            <div class="endpoint">
+                <p><span class="method get">GET</span> <span class="url">/profiles/{id}</span></p>
+                <p>Get musician profile by ID</p>
+            </div>
+            <div class="endpoint">
+                <p><span class="method get">GET</span> <span class="url">/profiles/user/{userId}</span></p>
+                <p>Get musician profile by user ID</p>
+            </div>
+            <div class="endpoint">
+                <p><span class="method post">POST</span> <span class="url">/profiles</span></p>
+                <p>Create a new musician profile</p>
+            </div>
+            <div class="endpoint">
+                <p><span class="method put">PUT</span> <span class="url">/profiles/{id}</span></p>
+                <p>Update a musician profile</p>
+            </div>
+            <div class="endpoint">
+                <p><span class="method delete">DELETE</span> <span class="url">/profiles/{id}</span></p>
+                <p>Delete a musician profile</p>
+            </div>
+        </div>
+
+        <div class="api-section">
+            <h3>Ratings</h3>
+            <div class="endpoint">
+                <p><span class="method get">GET</span> <span class="url">/ratings/musician/{musicianId}</span></p>
+                <p>Get all ratings for a musician</p>
+            </div>
+            <div class="endpoint">
+                <p><span class="method get">GET</span> <span class="url">/ratings/{id}</span></p>
+                <p>Get a specific rating by ID</p>
+            </div>
+            <div class="endpoint">
+                <p><span class="method get">GET</span> <span class="url">/ratings/musician/{musicianId}/user/{userId}</span></p>
+                <p>Get rating from a specific user for a musician</p>
+            </div>
+            <div class="endpoint">
+                <p><span class="method post">POST</span> <span class="url">/ratings</span></p>
+                <p>Add a new rating for a musician</p>
+            </div>
+            <div class="endpoint">
+                <p><span class="method delete">DELETE</span> <span class="url">/ratings/{id}</span></p>
+                <p>Delete a rating</p>
+            </div>
+        </div>
+
+        <div class="api-section">
+            <h3>Multimedia Files</h3>
+            <div class="endpoint">
+                <p><span class="method get">GET</span> <span class="url">/multimedia/musician/{musicianId}?publicOnly=true|false</span></p>
+                <p>Get all multimedia files for a musician</p>
+            </div>
+            <div class="endpoint">
+                <p><span class="method get">GET</span> <span class="url">/multimedia/{id}</span></p>
+                <p>Get metadata for a specific file</p>
+            </div>
+            <div class="endpoint">
+                <p><span class="method get">GET</span> <span class="url">/multimedia/{id}/download</span></p>
+                <p>Download a file</p>
+            </div>
+            <div class="endpoint">
+                <p><span class="method post">POST</span> <span class="url">/multimedia/upload</span></p>
+                <p>Upload a new file (multipart/form-data)</p>
+            </div>
+            <div class="endpoint">
+                <p><span class="method put">PUT</span> <span class="url">/multimedia/{id}</span></p>
+                <p>Update file metadata</p>
+            </div>
+            <div class="endpoint">
+                <p><span class="method delete">DELETE</span> <span class="url">/multimedia/{id}</span></p>
+                <p>Delete a file</p>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>Multimedia Microservice &copy; 2025 | Powered by JakartaEE and MongoDB</p>
+    </footer>
+</body>
+</html>
