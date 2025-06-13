@@ -14,6 +14,7 @@ public class MusicianProfileDto {
     private String userId;
     private String name;
     private String biography;
+    private String imageUrl;
     private List<String> genres;
     private List<String> instruments;
     private Date createdAt;
@@ -35,13 +36,14 @@ public class MusicianProfileDto {
         this.biography = biography;
     }
     
-    public MusicianProfileDto(String id, String userId, String name, String biography, 
+    public MusicianProfileDto(String id, String userId, String name, String biography, String imageUrl,
                               List<String> genres, List<String> instruments, 
                               Date createdAt, Date updatedAt, double averageRating, int totalRatings) {
         this.id = id;
         this.userId = userId;
         this.name = name;
         this.biography = biography;
+        this.imageUrl = imageUrl;
         this.genres = genres;
         this.instruments = instruments;
         this.createdAt = createdAt;
@@ -77,6 +79,7 @@ public class MusicianProfileDto {
             doc.getString("userId"),
             doc.getString("name"),
             doc.getString("biography"),
+            doc.getString("imageUrl"),
             genres,
             instruments,
             doc.getDate("createdAt"),
@@ -102,6 +105,7 @@ public class MusicianProfileDto {
             .append("userId", userId)
             .append("name", name)
             .append("biography", biography)
+            .append("imageUrl", imageUrl)
             .append("genres", genres)
             .append("instruments", instruments)
             .append("createdAt", createdAt)
@@ -141,6 +145,14 @@ public class MusicianProfileDto {
 
     public void setBiography(String biography) {
         this.biography = biography;
+    }
+    
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
     }
 
     public List<String> getGenres() {

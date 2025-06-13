@@ -33,8 +33,9 @@ public class MongoDebugServlet extends HttpServlet {
         PrintWriter out = response.getWriter();
         
         try {
-            // Obtener conexión a MongoDB
-            MongoClient mongoClient = Database.getConnection();
+            // Crear instancia de Database para obtener conexión a MongoDB
+            Database database = new Database();
+            MongoClient mongoClient = database.getMongoClient();
             
             // Listar bases de datos para confirmar conexión
             List<String> databases = new ArrayList<>();

@@ -16,7 +16,7 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import org.bson.BsonValue;
+
 import org.bson.Document;
 import org.bson.types.ObjectId;
 
@@ -74,6 +74,50 @@ public class MultimediaDao {
         } catch (Exception e) {
             throw new RuntimeException("Error uploading file: " + e.getMessage(), e);
         }
+    }
+    
+    /**
+     * Get all multimedia files
+     * 
+     * @return List of all multimedia metadata
+     */
+    public List<MultimediaDto> getAllFiles() {
+        List<MultimediaDto> files = new ArrayList<>();
+        try {
+            // Verificar si la colección existe
+            if (collection == null) {
+                System.err.println("Warning: Collection 'fs.files' is null");
+                return files;
+            }
+            
+            try {
+                FindIterable<Document> docs = collection.find();
+                if (docs == null) {
+                    System.err.println("Warning: Find operation returned null");
+                    return files;
+                }
+                
+                MongoCursor<Document> cursor = docs.iterator();
+                while (cursor.hasNext()) {
+                    Document doc = cursor.next();
+                    if (doc != null) {
+                        MultimediaDto file = MultimediaDto.fromDocument(doc);
+                        if (file != null) {
+                            files.add(file);
+                        }
+                    }
+                }
+                cursor.close();
+            } catch (Exception e) {
+                System.err.println("Error during cursor iteration: " + e.toString());
+                e.printStackTrace();
+            }
+        } catch (Exception e) {
+            System.err.println("Critical error in getAllFiles: " + e.toString());
+            e.printStackTrace();
+            // No relanzar la excepción para evitar errores 500
+        }
+        return files;
     }
     
     /**
@@ -188,6 +232,38 @@ public class MultimediaDao {
             return result.getDeletedCount() > 0;
         } catch (Exception e) {
             throw new RuntimeException("Error deleting file: " + e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * Check if a file exists by its GridFS ID
+     * 
+     * @param fileId The GridFS file ID
+     * @return true if the file exists, false otherwise
+     */
+    /**
+     * Update multimedia file metadata
+     * 
+     * @param multimedia The updated multimedia metadata
+     * @return true if updated, false if not found
+     * @throws RuntimeException if an error occurs
+     */
+    public boolean updateFile(MultimediaDto multimedia) {
+        try {
+            // Update the metadata document
+            Document updateDoc = multimedia.toDocument();
+            // Remove _id to avoid duplicate key errors if it's set
+            updateDoc.remove("_id");
+            
+            // Update the document with the given ID
+            Document result = collection.findOneAndReplace(
+                Filters.eq("_id", new ObjectId(multimedia.getId())),
+                updateDoc
+            );
+            
+            return result != null;
+        } catch (Exception e) {
+            throw new RuntimeException("Error updating file metadata: " + e.getMessage(), e);
         }
     }
     

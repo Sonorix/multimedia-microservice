@@ -49,6 +49,10 @@ public class Database {
         this.gridFSBucket = GridFSBuckets.create(database, "files");
     }
     
+    public MongoClient getMongoClient() {
+        return this.mongoClient;
+    }
+    
     public MongoDatabase getDatabase() {
         return this.database;
     }

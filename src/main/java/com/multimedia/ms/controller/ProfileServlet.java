@@ -117,24 +117,27 @@ public class ProfileServlet extends HttpServlet {
             validateFields(data, requiredFields);
             
             // Create profile DTO
-            MusicianProfileDto profile = new MusicianProfileDto();
-            profile.setUserId(data.getString("userId"));
-            profile.setName(data.getString("artisticName"));
+            MusicianProfileDto newProfile = new MusicianProfileDto();
+            newProfile.setUserId(data.getString("userId"));
+            newProfile.setName(data.getString("artisticName"));
             
-            // Set biography
-            if (data.containsKey("bio")) {
-                profile.setBiography(data.getString("bio"));
+            if (data.containsKey("imageUrl") && !data.isNull("imageUrl")) {
+                newProfile.setImageUrl(data.getString("imageUrl"));
+            }
+            
+            if (data.containsKey("bio") && !data.isNull("bio")) {
+                newProfile.setBiography(data.getString("bio"));
             }
             
             // Set genres
             if (data.containsKey("genre")) {
                 List<String> genres = new ArrayList<>();
                 genres.add(data.getString("genre"));
-                profile.setGenres(genres);
+                newProfile.setGenres(genres);
             }
             
             // Save profile
-            MusicianProfileDto savedProfile = profileDao.createProfile(profile);
+            MusicianProfileDto savedProfile = profileDao.createProfile(newProfile);
             
             if (savedProfile != null) {
                 JsonObject jsonResult = Json.createObjectBuilder()
@@ -297,6 +300,13 @@ public class ProfileServlet extends HttpServlet {
             .add("id", profile.getId())
             .add("userId", profile.getUserId())
             .add("artisticName", profile.getName());
+            
+        // Añadir imageUrl si está disponible
+        if (profile.getImageUrl() != null && !profile.getImageUrl().isEmpty()) {
+            builder.add("imageUrl", profile.getImageUrl());
+        } else {
+            builder.addNull("imageUrl");
+        }
         
         // Add genres
         if (profile.getGenres() != null && !profile.getGenres().isEmpty()) {

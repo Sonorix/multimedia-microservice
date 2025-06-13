@@ -53,6 +53,50 @@ public class RatingDao {
     }
     
     /**
+     * Get all ratings
+     * 
+     * @return List of all ratings
+     */
+    public List<RatingDto> getAllRatings() {
+        List<RatingDto> ratings = new ArrayList<>();
+        try {
+            // Verificar si la colección existe
+            if (collection == null) {
+                System.err.println("Warning: Collection 'ratings' is null");
+                return ratings;
+            }
+            
+            try {
+                FindIterable<Document> docs = collection.find();
+                if (docs == null) {
+                    System.err.println("Warning: Find operation returned null");
+                    return ratings;
+                }
+                
+                MongoCursor<Document> cursor = docs.iterator();
+                while (cursor.hasNext()) {
+                    Document doc = cursor.next();
+                    if (doc != null) {
+                        RatingDto rating = RatingDto.fromDocument(doc);
+                        if (rating != null) {
+                            ratings.add(rating);
+                        }
+                    }
+                }
+                cursor.close();
+            } catch (Exception e) {
+                System.err.println("Error during cursor iteration: " + e.toString());
+                e.printStackTrace();
+            }
+        } catch (Exception e) {
+            System.err.println("Critical error in getAllRatings: " + e.toString());
+            e.printStackTrace();
+            // No relanzar la excepción para evitar errores 500
+        }
+        return ratings;
+    }
+
+    /**
      * Get a rating by ID
      * 
      * @param id The rating ID

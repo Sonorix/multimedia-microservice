@@ -46,16 +46,25 @@ public class RatingServlet extends HttpServlet {
         
         try {
             if (pathInfo == null || pathInfo.equals("/")) {
-                // Get ratings for musician: /ratings?musicianId=xxx
+                // Get ratings for musician or all ratings if musicianId is not provided
                 String musicianId = request.getParameter("musicianId");
-                if (musicianId == null || musicianId.isEmpty()) {
-                    handleError(response, HttpServletResponse.SC_BAD_REQUEST, "Musician ID is required");
-                    return;
-                }
-                
-                List<RatingDto> ratings = ratingDao.getRatingsByMusicianId(musicianId);
+                List<RatingDto> ratings;
                 JsonArrayBuilder ratingsArray = Json.createArrayBuilder();
                 double avgRating = 0;
+                
+                if (musicianId != null && !musicianId.isEmpty()) {
+                    // Si se proporciona musicianId, filtrar por este
+                    ratings = ratingDao.getRatingsByMusicianId(musicianId);
+                } else {
+                    // Si no se proporciona musicianId, obtener todas las valoraciones
+                    try {
+                        ratings = ratingDao.getAllRatings();
+                    } catch (Exception e) {
+                        handleError(response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Error retrieving all ratings: " + e.toString());
+                        e.printStackTrace();
+                        return;
+                    }
+                }
                 
                 if (!ratings.isEmpty()) {
                     double totalRating = 0;
@@ -67,12 +76,16 @@ public class RatingServlet extends HttpServlet {
                     avgRating = totalRating / ratings.size();
                 }
                 
-                JsonObject result = Json.createObjectBuilder()
-                    .add("musicianId", musicianId)
+                JsonObjectBuilder resultBuilder = Json.createObjectBuilder()
                     .add("ratings", ratingsArray)
                     .add("averageRating", avgRating)
-                    .add("count", ratings.size())
-                    .build();
+                    .add("count", ratings.size());
+                    
+                if (musicianId != null && !musicianId.isEmpty()) {
+                    resultBuilder.add("musicianId", musicianId);
+                }
+                
+                JsonObject result = resultBuilder.build();
                 
                 try (PrintWriter out = response.getWriter()) {
                     out.print(result.toString());

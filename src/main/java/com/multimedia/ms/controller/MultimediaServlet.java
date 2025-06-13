@@ -5,7 +5,6 @@ import com.multimedia.ms.dao.MultimediaDao;
 import com.multimedia.ms.model.Database;
 import com.multimedia.ms.model.MusicianProfileDto;
 import com.multimedia.ms.model.MultimediaDto;
-import io.github.cdimascio.dotenv.Dotenv;
 import jakarta.json.Json;
 import jakarta.json.JsonArrayBuilder;
 import jakarta.json.JsonObject;
@@ -22,16 +21,10 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
-import java.io.StringReader;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Collectors;
 import org.apache.commons.io.FilenameUtils;
 
 /**
@@ -57,15 +50,35 @@ public class MultimediaServlet extends HttpServlet {
         
         // Crear instancia de Database para acceder a las variables de entorno
         Database database = new Database();
-        this.allowedFileTypes = new HashSet<>(Arrays.asList(
-                database.getConfigValue("ALLOWED_FILE_TYPES", "mp3,mp4,jpg,jpeg,png").toLowerCase().split(",")));
-        this.maxFileSize = Long.parseLong(database.getConfigValue("MAX_FILE_SIZE", "10485760")); // Default 10MB
-        this.uploadTempDir = database.getConfigValue("UPLOAD_TEMP_DIR", System.getProperty("java.io.tmpdir"));
         
-        // Ensure temp directory exists
-        File tempDir = new File(uploadTempDir);
-        if (!tempDir.exists()) {
-            tempDir.mkdirs();
+        // Definir tipos de archivos permitidos con valores predeterminados seguros
+        String defaultTypes = "mp3,mp4,jpg,jpeg,png";
+        String configuredTypes = database.getConfigValue("ALLOWED_FILE_TYPES", defaultTypes);
+        this.allowedFileTypes = new HashSet<>(Arrays.asList(configuredTypes.toLowerCase().split(",")));
+        
+        // Configurar tamaño máximo de archivo con valor predeterminado de 10MB
+        String defaultMaxSize = "10485760";
+        this.maxFileSize = Long.parseLong(database.getConfigValue("MAX_FILE_SIZE", defaultMaxSize));
+        
+        // Configurar directorio temporal
+        String defaultTempDir = System.getProperty("java.io.tmpdir");
+        this.uploadTempDir = database.getConfigValue("UPLOAD_TEMP_DIR", defaultTempDir);
+        
+        // Asegurar que el directorio temporal existe y tiene permisos de escritura
+        try {
+            File tempDir = new File(uploadTempDir);
+            if (!tempDir.exists()) {
+                boolean created = tempDir.mkdirs();
+                if (!created) {
+                    System.err.println("Warning: Could not create upload temp directory: " + uploadTempDir);
+                }
+            }
+            
+            if (!tempDir.canWrite()) {
+                System.err.println("Warning: Upload temp directory is not writable: " + uploadTempDir);
+            }
+        } catch (SecurityException e) {
+            System.err.println("Security exception creating temp directory: " + e.getMessage());
         }
     }
 
@@ -92,14 +105,40 @@ public class MultimediaServlet extends HttpServlet {
             if (pathInfo == null || pathInfo.equals("/")) {
                 // List files route: /multimedia?musicianId=xxx&publicOnly=true
                 String musicianId = request.getParameter("musicianId");
-                boolean publicOnly = Boolean.parseBoolean(request.getParameter("publicOnly"));
+                String publicOnlyStr = request.getParameter("publicOnly"); 
+                boolean publicOnly = publicOnlyStr != null && (publicOnlyStr.equalsIgnoreCase("true") || publicOnlyStr.equals("1"));
                 
-                if (musicianId == null || musicianId.isEmpty()) {
-                    handleError(response, HttpServletResponse.SC_BAD_REQUEST, "Musician ID is required");
-                    return;
+                List<MultimediaDto> files;
+                JsonObjectBuilder resultBuilder = Json.createObjectBuilder();
+                
+                if (musicianId != null && !musicianId.isEmpty()) {
+                    // Si se proporciona musicianId, verificar que existe el músico
+                    MusicianProfileDto musician = profileDao.getProfileById(musicianId);
+                    if (musician == null) {
+                        handleError(response, HttpServletResponse.SC_NOT_FOUND, "Musician not found with ID: " + musicianId);
+                        return;
+                    }
+                    
+                    // Get files for specific musician
+                    if (publicOnly) {
+                        files = multimediaDao.getPublicFilesByMusicianId(musicianId);
+                    } else {
+                        files = multimediaDao.getFilesByMusicianId(musicianId);
+                    }
+                    
+                    // Añadir musicianId al resultado
+                    resultBuilder.add("musicianId", musicianId);
+                } else {
+                    // Si no se proporciona musicianId, obtener todos los archivos
+                    try {
+                        files = multimediaDao.getAllFiles();
+                    } catch (Exception e) {
+                        handleError(response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Error retrieving all files: " + e.toString());
+                        e.printStackTrace();
+                        return;
+                    }
                 }
                 
-                List<MultimediaDto> files = multimediaDao.getFilesByMusician(musicianId, publicOnly);
                 JsonArrayBuilder filesArray = Json.createArrayBuilder();
                 
                 for (MultimediaDto file : files) {
@@ -130,7 +169,7 @@ public class MultimediaServlet extends HttpServlet {
             } else if (pathInfo.matches("^/[^/]+$")) {
                 // Get file metadata: /multimedia/{id}
                 String id = pathInfo.substring(1);
-                MultimediaDto file = multimediaDao.getFileById(id);
+                MultimediaDto file = multimediaDao.getFileMetadata(id);
                 
                 if (file == null) {
                     handleError(response, HttpServletResponse.SC_NOT_FOUND, "File not found");
@@ -159,7 +198,7 @@ public class MultimediaServlet extends HttpServlet {
             } else if (pathInfo.matches("^/[^/]+/download$")) {
                 // Download file: /multimedia/{id}/download
                 String id = pathInfo.substring(1, pathInfo.lastIndexOf("/"));
-                MultimediaDto file = multimediaDao.getFileById(id);
+                MultimediaDto file = multimediaDao.getFileMetadata(id);
                 
                 if (file == null) {
                     handleError(response, HttpServletResponse.SC_NOT_FOUND, "File not found");
@@ -170,9 +209,9 @@ public class MultimediaServlet extends HttpServlet {
                 response.setHeader("Content-Disposition", "attachment; filename=\"" + file.getFilename() + "\"");
                 response.setContentLength((int) file.getFileSize());
                 
-                try (InputStream fileStream = multimediaDao.getFileContent(file.getFileId())) {
-                    fileStream.transferTo(response.getOutputStream());
-                }
+                // Get file content
+                byte[] fileContent = multimediaDao.downloadFile(file.getFileId());
+                response.getOutputStream().write(fileContent);
             } else {
                 handleError(response, HttpServletResponse.SC_NOT_FOUND, "Resource not found");
             }
@@ -247,27 +286,26 @@ public class MultimediaServlet extends HttpServlet {
             }
             
             // Create temporary file
-            String fileId = UUID.randomUUID().toString();
             String contentType = filePart.getContentType();
             String mediaType = determineMediaType(contentType);
             
             // Save to MongoDB
-            try (InputStream inputStream = filePart.getInputStream()) {
-                MultimediaDto multimediaDto = new MultimediaDto();
-                multimediaDto.setFileId(fileId);
-                multimediaDto.setFilename(fileName);
-                multimediaDto.setContentType(contentType);
-                multimediaDto.setMusicianId(musicianId);
-                multimediaDto.setTitle(title);
-                multimediaDto.setDescription(description);
-                multimediaDto.setMediaType(mediaType);
-                multimediaDto.setFileSize(fileSize);
-                multimediaDto.setIsPublic(isPublic);
+            try (InputStream fileInputStream = filePart.getInputStream()) {
+                MultimediaDto multimedia = new MultimediaDto();
+                multimedia.setFilename(fileName);
+                multimedia.setContentType(contentType);
+                multimedia.setMediaType(mediaType);
+                multimedia.setMusicianId(musicianId);
+                multimedia.setTitle(title);
+                multimedia.setDescription(description);
+                multimedia.setFileSize(fileSize);
+                multimedia.setIsPublic(isPublic);
                 
-                String savedId = multimediaDao.saveFile(multimediaDto, inputStream);
+                // Save file to MongoDB usando uploadFile (no saveFile)
+                MultimediaDto savedFile = multimediaDao.uploadFile(multimedia, fileInputStream);
                 
                 JsonObject result = Json.createObjectBuilder()
-                    .add("id", savedId)
+                    .add("id", savedFile.getId())
                     .add("message", "File uploaded successfully")
                     .build();
                 
@@ -312,7 +350,7 @@ public class MultimediaServlet extends HttpServlet {
                 data = jsonReader.readObject();
             }
             
-            MultimediaDto file = multimediaDao.getFileById(id);
+            MultimediaDto file = multimediaDao.getFileMetadata(id);
             if (file == null) {
                 handleError(response, HttpServletResponse.SC_NOT_FOUND, "File not found");
                 return;
@@ -336,8 +374,13 @@ public class MultimediaServlet extends HttpServlet {
                 file.setIsPublic(data.getBoolean("isPublic"));
             }
             
-            // Save updated metadata
-            multimediaDao.updateFile(file);
+            // Actualizar los metadatos usando el método implementado en MultimediaDao
+            boolean updated = multimediaDao.updateFile(file);
+            
+            if (!updated) {
+                handleError(response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to update file metadata");
+                return;
+            }
             
             JsonObject result = Json.createObjectBuilder()
                 .add("id", file.getId())
@@ -378,7 +421,7 @@ public class MultimediaServlet extends HttpServlet {
         String id = pathInfo.substring(1);
         
         try {
-            MultimediaDto file = multimediaDao.getFileById(id);
+            MultimediaDto file = multimediaDao.getFileMetadata(id);
             if (file == null) {
                 handleError(response, HttpServletResponse.SC_NOT_FOUND, "File not found");
                 return;
