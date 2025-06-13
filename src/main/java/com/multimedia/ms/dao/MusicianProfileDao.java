@@ -28,7 +28,7 @@ public class MusicianProfileDao {
     
     public MusicianProfileDao() {
         this.database = new Database();
-        this.collection = database.getDatabase().getCollection("musician_profiles");
+        this.collection = database.getDatabase().getCollection("musicianProfiles");
     }
     
     /**

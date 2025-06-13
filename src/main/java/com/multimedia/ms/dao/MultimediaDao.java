@@ -30,7 +30,7 @@ public class MultimediaDao {
     
     public MultimediaDao() {
         this.database = new Database();
-        this.collection = database.getDatabase().getCollection("multimedia");
+        this.collection = database.getDatabase().getCollection("fs.files");
         this.gridFSBucket = database.getGridFSBucket();
     }
     

@@ -9,17 +9,44 @@
         <welcome-file>index.html</welcome-file>
     </welcome-file-list>
     
-    <!-- Configure multipart file upload size limits -->
+    <!-- Configure multipart file upload size limits for MultimediaServlet -->
     <servlet>
-        <servlet-name>jakarta.ws.rs.core.Application</servlet-name>
+        <servlet-name>MultimediaServlet</servlet-name>
+        <servlet-class>com.multimedia.ms.controller.MultimediaServlet</servlet-class>
         <multipart-config>
             <!-- 10MB max file size -->
             <max-file-size>10485760</max-file-size>
-            <!-- 10MB max request size -->
-            <max-request-size>10485760</max-request-size>
+            <!-- 100MB max request size -->
+            <max-request-size>104857600</max-request-size>
             <file-size-threshold>2097152</file-size-threshold>
         </multipart-config>
     </servlet>
+    
+    <servlet>
+        <servlet-name>ProfileServlet</servlet-name>
+        <servlet-class>com.multimedia.ms.controller.ProfileServlet</servlet-class>
+    </servlet>
+    
+    <servlet>
+        <servlet-name>RatingServlet</servlet-name>
+        <servlet-class>com.multimedia.ms.controller.RatingServlet</servlet-class>
+    </servlet>
+    
+    <!-- URL Mappings -->
+    <servlet-mapping>
+        <servlet-name>MultimediaServlet</servlet-name>
+        <url-pattern>/multimedia/*</url-pattern>
+    </servlet-mapping>
+    
+    <servlet-mapping>
+        <servlet-name>ProfileServlet</servlet-name>
+        <url-pattern>/profiles/*</url-pattern>
+    </servlet-mapping>
+    
+    <servlet-mapping>
+        <servlet-name>RatingServlet</servlet-name>
+        <url-pattern>/ratings/*</url-pattern>
+    </servlet-mapping>
     
     <!-- Session Configuration -->
     <session-config>
