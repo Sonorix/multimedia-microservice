@@ -1,281 +1,396 @@
-# Multimedia Microservice
+# Microservicio Multimedia
 
-A Java/JakartaEE microservice for managing musician profiles, ratings, and multimedia content with MongoDB integration.
+Un microservicio en Java/JakartaEE para la gestión de perfiles de músicos, valoraciones y contenido multimedia con integración MongoDB.
 
-## Overview
+## Descripción General
 
-This microservice provides APIs for:
-- Managing musician profiles with biographical information, genres, and instruments
-- Handling ratings and reviews for musicians
-- Uploading, storing, and retrieving multimedia files (audio, video, images)
+Este microservicio proporciona APIs para:
+- Gestionar perfiles de músicos con información biográfica, géneros musicales e instrumentos
+- Manejar valoraciones y reseñas para músicos
+- Subir, almacenar y recuperar archivos multimedia (audio, video, imágenes)
+- Almacenar URLs de imágenes para perfiles de músicos
 
-## Technology Stack
+## Tecnologías Utilizadas
 
 - Java 17
 - Jakarta EE 11
-- MongoDB (with GridFS for file storage)
+- MongoDB (con GridFS para almacenamiento de archivos)
 - Maven
 
-## Requirements
+## Requisitos
 
-- JDK 17 or higher
-- MongoDB server
+- JDK 17 o superior
+- Servidor MongoDB
 - Maven 3.6+
+- Servidor compatible con Jakarta EE (Tomcat 11 recomendado)
 
-## Configuration
+## Configuración de MongoDB
 
-Before running the application, create a `.env` file in the project root based on the provided `.env.template`. This file should contain:
+### Instalación de MongoDB
+
+1. Descarga MongoDB Community Server desde [el sitio oficial](https://www.mongodb.com/try/download/community)
+2. Instala siguiendo las instrucciones para tu sistema operativo
+3. Verifica la instalación ejecutando `mongosh` en tu terminal
+
+### Creación de Base de Datos y Colecciones
+
+1. Accede a MongoDB usando el shell:
+   ```
+   mongosh
+   ```
+
+2. Crea y selecciona la base de datos:
+   ```javascript
+   use multimedia_db
+   ```
+
+3. Crea las colecciones necesarias (aunque MongoDB las crea automáticamente, es recomendable crearlas explícitamente):
+   ```javascript
+   db.createCollection("profiles")
+   db.createCollection("ratings")
+   db.createCollection("fs.files")
+   db.createCollection("fs.chunks")
+   ```
+
+4. Verifica la creación de las colecciones:
+   ```javascript
+   show collections
+   ```
+
+### Inserción de Datos de Prueba
+
+Para insertar perfiles de músicos con URLs de imágenes:
+
+```javascript
+db.profiles.insertMany([
+  {
+    userId: "user001",
+    name: "John Smith",
+    biography: "Guitarrista callejero con más de 10 años de experiencia.",
+    imageUrl: "https://cdn.pixabay.com/photo/2014/10/11/22/20/guitar-case-485112_1280.jpg",
+    genres: ["Jazz", "Blues"],
+    instruments: ["Guitarra", "Armónica"],
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    averageRating: 4.7,
+    totalRatings: 45
+  },
+  {
+    userId: "user002",
+    name: "Alex Rock",
+    biography: "Rockstar especializado en música electrónica y efectos visuales.",
+    imageUrl: "https://cdn.pixabay.com/photo/2015/03/08/17/25/musician-664432_640.jpg",
+    genres: ["Rock", "Electrónica"],
+    instruments: ["Guitarra Eléctrica", "Sintetizador"],
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    averageRating: 4.2,
+    totalRatings: 28
+  }
+])
+```
+
+## Configuración del Proyecto
+
+Antes de ejecutar la aplicación, crea un archivo `.env` en la raíz del proyecto basado en la plantilla `.env.template`. Este archivo debe contener:
 
 ```
 MONGODB_CONNECTION_STRING=mongodb://localhost:27017
 MONGODB_DATABASE=multimedia_db
 MAX_FILE_SIZE=10485760
 ALLOWED_FILE_TYPES=mp3,mp4,jpg,jpeg,png
-UPLOAD_TEMP_DIR=/path/to/temp/dir
+UPLOAD_TEMP_DIR=/ruta/a/directorio/temporal
 ```
 
-Adjust the values as needed for your environment.
+Ajusta los valores según sea necesario para tu entorno.
 
-## Build and Deployment
+## Compilación y Despliegue
 
-To build the project:
+Para compilar el proyecto:
 
 ```bash
 mvn clean package
 ```
 
-This creates a WAR file in the `target` directory that can be deployed to any Jakarta EE compatible server (e.g., Payara, Glassfish, TomEE).
+Esto crea un archivo WAR en el directorio `target` que puede ser desplegado en cualquier servidor compatible con Jakarta EE (por ejemplo, Tomcat 11, Payara, Glassfish, TomEE).
 
-## API Documentation
+Para desplegar en Tomcat:
+1. Copia el archivo WAR (`Multimedia-ms-1.0-SNAPSHOT.war`) a la carpeta `webapps` de Tomcat
+2. Renombra el archivo a `multimedia.war` para una URL más sencilla
+3. Inicia Tomcat si no está ya en ejecución
 
-### Base URL
+## Documentación de la API
 
-All API endpoints are accessible under:
+### URL Base
+
+Todos los endpoints de la API son accesibles bajo:
 
 ```
-/Multimedia-microservice/resources/
+/multimedia/
 ```
 
-### Musician Profile API
+### API de Perfiles de Músicos
 
-#### Get All Profiles
+#### Obtener Todos los Perfiles
 
 ```
 GET /profiles
 ```
 
-Returns a list of all musician profiles.
+Devuelve una lista de todos los perfiles de músicos.
 
-#### Get Profile by ID
+#### Obtener Perfil por ID
 
 ```
 GET /profiles/{id}
 ```
 
-Returns a single musician profile with the specified ID.
+Devuelve un único perfil de músico con el ID especificado.
 
-#### Get Profile by User ID
+#### Obtener Perfil por ID de Usuario
 
 ```
 GET /profiles/user/{userId}
 ```
 
-Returns the musician profile associated with the specified user ID.
+Devuelve el perfil de músico asociado con el ID de usuario especificado.
 
-#### Create Profile
+#### Crear Perfil
 
 ```
 POST /profiles
 ```
 
-Create a new musician profile.
+Crea un nuevo perfil de músico.
 
-**Request Body**:
+**Cuerpo de la Solicitud**:
 ```json
 {
   "userId": "user123",
-  "name": "John Smith",
-  "biography": "Jazz guitarist with 10 years of experience",
-  "genres": ["Jazz", "Blues"],
-  "instruments": ["Guitar", "Piano"]
+  "artisticName": "John Smith",
+  "bio": "Guitarrista de jazz con 10 años de experiencia",
+  "genre": "Jazz",
+  "imageUrl": "https://cdn.pixabay.com/photo/2014/10/11/22/20/guitar-case-485112_1280.jpg"
 }
 ```
 
-#### Update Profile
+#### Actualizar Perfil
 
 ```
 PUT /profiles/{id}
 ```
 
-Update an existing musician profile.
+Actualiza un perfil de músico existente.
 
-**Request Body**:
+**Cuerpo de la Solicitud**:
 ```json
 {
-  "name": "John A. Smith",
-  "biography": "Updated biography",
-  "genres": ["Jazz", "Blues", "Fusion"],
-  "instruments": ["Guitar", "Piano", "Bass"]
+  "artisticName": "John A. Smith",
+  "bio": "Biografía actualizada",
+  "genre": "Jazz",
+  "imageUrl": "https://cdn.pixabay.com/photo/2015/03/08/17/25/musician-664432_640.jpg"
 }
 ```
 
-#### Delete Profile
+#### Eliminar Perfil
 
 ```
 DELETE /profiles/{id}
 ```
 
-Delete a musician profile.
+Elimina un perfil de músico.
 
-### Ratings API
+### API de Valoraciones
 
-#### Get All Ratings for a Musician
+#### Obtener Todas las Valoraciones para un Músico
 
 ```
 GET /ratings/musician/{musicianId}
 ```
 
-Returns all ratings for the specified musician.
+Devuelve todas las valoraciones para el músico especificado.
 
-#### Get Rating by ID
+#### Obtener Valoración por ID
 
 ```
 GET /ratings/{id}
 ```
 
-Returns a single rating with the specified ID.
+Devuelve una única valoración con el ID especificado.
 
-#### Get Rating by User and Musician
+#### Obtener Valoración por Usuario y Músico
 
 ```
 GET /ratings/musician/{musicianId}/user/{userId}
 ```
 
-Returns the rating submitted by a specific user for a specific musician.
+Devuelve la valoración enviada por un usuario específico para un músico específico.
 
-#### Add Rating
+#### Añadir Valoración
 
 ```
 POST /ratings
 ```
 
-Add a new rating for a musician.
+Añade una nueva valoración para un músico.
 
-**Request Body**:
+**Cuerpo de la Solicitud**:
 ```json
 {
   "musicianId": "musician123",
   "userId": "user456",
   "rating": 4.5,
-  "comment": "Great performance, very talented!"
+  "comment": "Gran actuación, muy talentoso!"
 }
 ```
 
-#### Delete Rating
+#### Eliminar Valoración
 
 ```
 DELETE /ratings/{id}
 ```
 
-Delete a rating.
+Elimina una valoración.
 
-### Multimedia API
+### API Multimedia
 
-#### Get All Files for a Musician
+#### Obtener Todos los Archivos de un Músico
 
 ```
 GET /multimedia/musician/{musicianId}?publicOnly=true|false
 ```
 
-Returns all multimedia files for the specified musician. Use the `publicOnly` query parameter to filter for public files only.
+Devuelve todos los archivos multimedia para el músico especificado. Usa el parámetro de consulta `publicOnly` para filtrar solo los archivos públicos.
 
-#### Get File Metadata
+#### Obtener Metadatos de Archivo
 
 ```
 GET /multimedia/{id}
 ```
 
-Returns metadata for a specific file.
+Devuelve metadatos para un archivo específico.
 
-#### Download File
+#### Descargar Archivo
 
 ```
 GET /multimedia/{id}/download
 ```
 
-Downloads the file with the specified ID.
+Descarga el archivo con el ID especificado.
 
-#### Upload File
+#### Subir Archivo
 
 ```
 POST /multimedia/upload
 ```
 
-Upload a new file. Must be sent as `multipart/form-data`.
+Sube un nuevo archivo. Debe enviarse como `multipart/form-data`.
 
-**Form Fields**:
-- `file`: The file to upload
-- `musicianId`: ID of the musician who owns this file
-- `title`: Title of the file
-- `description`: Optional description
-- `isPublic`: Whether the file should be publicly accessible (`true` or `false`)
+**Campos del Formulario**:
+- `file`: El archivo para subir
+- `musicianId`: ID del músico que posee este archivo
+- `title`: Título del archivo
+- `description`: Descripción opcional
+- `isPublic`: Si el archivo debe ser accesible públicamente (`true` o `false`)
 
-#### Update File Metadata
+#### Actualizar Metadatos de Archivo
 
 ```
 PUT /multimedia/{id}
 ```
 
-Update metadata for an existing file.
+Actualiza metadatos para un archivo existente.
 
-**Request Body**:
+**Cuerpo de la Solicitud**:
 ```json
 {
-  "title": "Updated title",
-  "description": "Updated description",
+  "title": "Título actualizado",
+  "description": "Descripción actualizada",
   "isPublic": true
 }
 ```
 
-#### Delete File
+#### Eliminar Archivo
 
 ```
 DELETE /multimedia/{id}
 ```
 
-Delete a file.
+Elimina un archivo.
 
-## Error Handling
+## Manejo de Errores
 
-All API endpoints return standardized error responses in the following format:
+Todos los endpoints de la API devuelven respuestas de error estandarizadas en el siguiente formato:
 
 ```json
 {
-  "status": 400,
-  "message": "Error message description",
-  "path": "/profiles/123",
-  "timestamp": "2025-06-11T21:51:24.123"
+  "error": "Descripción del mensaje de error"
 }
 ```
 
-Common HTTP status codes:
-- 200: Success
-- 201: Created successfully
-- 400: Bad request (invalid input)
-- 404: Resource not found
-- 409: Conflict
-- 500: Server error
+Códigos de estado HTTP comunes:
+- 200: Éxito
+- 201: Creado exitosamente
+- 400: Solicitud incorrecta (entrada inválida)
+- 404: Recurso no encontrado
+- 409: Conflicto
+- 500: Error del servidor
 
-## Security Considerations
+## Consideraciones de Seguridad
 
-This microservice does not handle authentication directly. It's designed to work within a larger microservices architecture where authentication is handled by a separate service.
+Este microservicio no maneja la autenticación directamente. Está diseñado para funcionar dentro de una arquitectura de microservicios más grande donde la autenticación es manejada por un servicio separado.
 
-For production deployment, consider:
-- Implementing API gateway authentication
-- Setting up CORS configuration
-- Using HTTPS
-- Implementing rate limiting
+Para despliegue en producción, considera:
+- Implementar autenticación de gateway de API
+- Configurar CORS
+- Usar HTTPS
+- Implementar limitación de velocidad
 
-## Integration with Users-microservice
+## Integración con Users-microservice
 
-This microservice is designed to complement the Users-microservice project. User IDs referenced in this service should correspond to valid users in the Users-microservice.
+Este microservicio está diseñado para complementar el proyecto Users-microservice. Los IDs de usuario referenciados en este servicio deberían corresponder a usuarios válidos en el Users-microservice.
+
+## Características de URLs de Imágenes
+
+Desde la versión más reciente, el sistema admite el almacenamiento de URLs de imágenes externas para perfiles de músicos. Esto ofrece varias ventajas:
+
+- Menor uso de almacenamiento en la base de datos
+- Carga más rápida de imágenes
+- Posibilidad de usar CDNs para mejor rendimiento
+
+Para actualizar perfiles existentes con URLs de imágenes, puede usar:
+
+```javascript
+// En la shell de MongoDB
+db.profiles.updateMany(
+  { imageUrl: null },
+  { $set: { 
+      imageUrl: "https://cdn.pixabay.com/photo/2014/10/11/22/20/guitar-case-485112_1280.jpg"
+    }
+  }
+)
+```
+
+## Solución de Problemas
+
+### Error 500 en Endpoints
+
+Si los endpoints devuelven errores 500 después de la configuración inicial:
+1. Asegúrese de que las colecciones `profiles`, `ratings`, `fs.files` y `fs.chunks` existen en la base de datos
+2. Verifique que el archivo `.env` contiene las variables correctas y está en la ubicación adecuada
+3. Compruebe los logs del servidor para mensajes de error específicos
+
+### Problemas de Conexión a MongoDB
+
+Si hay problemas conectando con la base de datos:
+1. Verifique que MongoDB está en ejecución (`mongosh`)
+2. Confirme que la cadena de conexión en `.env` es correcta
+3. Asegúrese de que no hay restricciones de firewall bloqueando la conexión
+
+## Desarrollo Futuro
+
+Áreas planificadas para futuras mejoras:
+- Sistema de gestión de eventos musicales
+- Integración con servicios de streaming
+- Búsqueda avanzada de perfiles por género o instrumentos
+- Estadísticas y análisis de interacciones
